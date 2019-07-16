@@ -39,13 +39,11 @@
 
 <script id="game" type="text/javascript">
     //Variables used in endgame situations
-    let path = window.location.pathname;
-    let page = path.split("/").pop();
-    path = path.substring(0, path.length - page.length);
-    let winPath = "file:///" + path + "WinPage.html";
-    let losePath = "file:///" + path + "LosePage.html";
+    let path = "sapienzainteractivegraphicscourse.github.io/finalproject-vaporwaveendurance/";
+    let winPath = "https://" + path + "WinPage.html";
+    let losePath = "file://" + path + "LosePage.html";
     let flag = true;
-
+    
     let camera, renderer, container;
 
     //Variables for printing datas on the top of the page
@@ -120,7 +118,7 @@
 
                 //Game parameters
                 gameOn = true;
-                setTimeout("Creep.runLevel()", 5000);
+                setTimeout("Creep.runLevel()", 10000);
 
                 //Camera settings
                 camera = new THREE.PerspectiveCamera(60, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 60000);
@@ -215,7 +213,7 @@
                         case 'KeyP':
                             gameOn = !gameOn;
                             if(gameOn){
-                                setTimeout("Creep.runLevel()", 5000);
+                                setTimeout("Creep.runLevel()", 10000);
                             }
                             break;
                         case 'KeyU':{
