@@ -1,0 +1,425 @@
+<html lang="en">
+<head>
+    <title>Vaporwave Endurance</title>
+    <style>
+        body {
+            background-color: rgb(32, 18, 77);
+            position: absolute;
+            top: 47px;
+            left: 0px;
+            margin: 0px;
+            overflow: hidden;
+        }
+        p{
+            position: absolute;
+            top: -50px;
+            left: 100px;
+            font-family: "Courier New", 'Roboto Mono', monospace;
+            color: magenta;
+            z-index: 2;
+        }
+    </style>
+</head>
+
+<body>
+<script type="text/javascript" src="ThreeJS/build/three.min.js"></script>
+<script type="text/javascript" src="ThreeJS/examples/js/libs/stats.min.js"></script>
+<script type="text/javascript" src="ThreeJS/examples/js/WebGL.js"></script>
+<script type="text/javascript" src="ThreeJS/examples/js/loaders/OBJLoader.js"></script>
+<script type="text/javascript" src="ThreeJS/examples/js/controls/PointerLockControls.js"></script>
+<script type="text/javascript" src="ThreeJS/src/core/Object3D.js"></script>
+
+<script type="text/javascript" src="js/Detector.js"></script>
+<script type="text/javascript" src="js/Map.js"></script>
+<script type="text/javascript" src="js/Creep.js"></script>
+<script type="text/javascript" src="js/Score.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+
+<p><span id="endGame"></span>Score:<span id="score"></span>&nbsp&nbsp&nbsp&nbsp&nbspCash:<span id="cash"></span>&nbsp&nbsp&nbsp&nbsp&nbspWave:<span id="wave"></span>&nbsp&nbsp&nbsp&nbsp&nbspTower&nbspHealth:<span id="towerHealth"></span>&nbsp&nbsp&nbsp&nbsp&nbspCannon&nbspDamage:<span id="cannonDamage"></span>&nbsp&nbsp&nbsp&nbsp&nbspUpgrade&nbspAvailable:<span id="upgradesAvailable"></span></p>
+
+<script id="game" type="text/javascript">
+    //Variables used in endgame situations
+    let path = window.location.pathname;
+    let page = path.split("/").pop();
+    path = path.substring(0, path.length - page.length);
+    let winPath = "file:///" + path + "WinPage.html";
+    let losePath = "file:///" + path + "LosePage.html";
+    let flag = true;
+
+    let camera, renderer, container;
+
+    //Variables for printing datas on the top of the page
+    let outScore = document.getElementById("score");
+    let waveNum = document.getElementById("wave");
+    let outCash = document.getElementById("cash");
+    let outTowerHealth = document.getElementById("towerHealth");
+    let outCannonDamage = document.getElementById("cannonDamage");
+    let outAvailableUpgrades = document.getElementById("upgradesAvailable");
+    let endGameScreen = document.getElementById("endGame");
+
+    //Printing FPS
+    let stats = new Stats();
+    document.body.appendChild(stats.dom);
+
+    //Declaring hierarchical models
+    let base = new THREE.Group();
+    let base2 = new THREE.Group();
+
+    let canvas;
+
+    //Texture loader
+    let loaderObj = new THREE.OBJLoader();
+
+    let SCREEN_HEIGHT = window.innerHeight, SCREEN_WIDTH = window.innerWidth, MARGIN = 0;
+    let PLANE_HEIGHT = 10000, PLANE_WIDTH = 10000, PLANE_S_H_W = 50;
+
+    //Initializing THREE.js scene
+    let scene = new THREE.Scene();
+    scene.add(base);
+
+    let gameOn;
+    let theta = 45;
+
+    //Various declaration for bullets and animations
+    let speed = .01;
+    let speedModifier = 1;
+    let lastUpdate = new Date().getTime();
+    let bullet;
+    let bullets = [];
+    let emitter = new THREE.Object3D();
+    let speedBullet = 25000;
+    let clock = new THREE.Clock();
+    let delta = 0;
+    let counter = 0;
+
+    //Checking webgl
+    $(document).ready(function () {
+        if (!Detector.webgl)
+            Detector.addGetWebGLMessage();
+        else {
+            init();
+            animate();
+            function init() {
+
+                container = document.createElement('div');
+                container.setAttribute('id', "renderWindow");
+                container.style.position = "absolute";
+                container.style.top = '0';
+                container.style.left = '0';
+                document.body.appendChild(container);
+
+                //Initializing all
+                Map.initialize(PLANE_HEIGHT, PLANE_WIDTH, PLANE_S_H_W);
+                Map.generate();
+                Creep.initialize();
+                Score.initialize();
+
+                //Defining bullets
+                bullet = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 4), new THREE.MeshBasicMaterial({color: Score.myColor}));
+                bullet.name = 'Bullet';
+
+                //Game parameters
+                gameOn = true;
+                setTimeout("Creep.runLevel()", 5000);
+
+                //Camera settings
+                camera = new THREE.PerspectiveCamera(60, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 60000);
+                camera.updateProjectionMatrix();
+                camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+                //Light source
+                let ambientLight = new THREE.AmbientLight( 0xffffff );
+                scene.add(ambientLight);
+
+                //Audio player
+                let listener = new THREE.AudioListener();
+                camera.add( listener );
+                let sound = new THREE.Audio( listener );
+                let audioLoader = new THREE.AudioLoader();
+                audioLoader.load( 'song.ogg', function( buffer ) {
+                    sound.setBuffer( buffer );
+                    sound.setLoop( true );
+                    sound.setVolume( 0.5 );
+                    sound.play();
+                });
+
+                //Canvas definition
+                canvas = document.createElement('canvas');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                let context = canvas.getContext('2d');
+                context.fillStyle = 'rgb( 200, 200, 200 )';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+
+                //Drawing elements
+                drawBox();
+                drawElements();
+
+                //Some parameters for hierarchical models
+                base.position.set(0, 0, 100);
+                base.scale.set(0.8,0.8,0.8);
+
+                //Defining the end of the path
+                let rollOverGeo = new THREE.BoxGeometry( 160, 160, 160 );
+                rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.4, transparent: false } );
+                rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+                rollOverMesh.position.set(0, 0, 100);
+                scene.add( rollOverMesh );
+
+                //Adding webgl renderer
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+                renderer.sortObjects = false;
+                renderer.autoClear = false;
+                container.appendChild(renderer.domElement);
+
+                //Adding controls for the visual
+                let controls = new THREE.PointerLockControls(camera, renderer.domElement);
+                //let controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.rotateSpeed = 2;
+                //controls.enableZoom = false;
+                //controls.enablePan = false;
+                //controls.target.set(0, 1200 , 100);
+
+                //Other camera settings
+                camera.position.x = base.position.x;
+                camera.position.y = base.position.y+1300;
+                camera.position.z = base.position.z;
+                camera.lookAt(new THREE.Vector3(0,1200,-100));
+                camera.add(base2);
+
+                //Adding the bullet emitter in front of the cannon
+                emitter.position.set(2, -1, -5);
+                camera.add(emitter);
+
+                //Adding the crosshair to the camera
+                let crosshair = new THREE.RingGeometry( 10, 14, 16 );
+                let ch_material = new THREE.MeshBasicMaterial( { color: 0xff0000, side: THREE.DoubleSide } );
+                let ch_mesh = new THREE.Mesh( crosshair, ch_material );
+                ch_mesh.position.set(0, 0, -1000);
+                camera.add( ch_mesh );
+                scene.add(camera);
+
+                //Event listeners
+                window.addEventListener('resize', onWindowResize, false);
+                window.addEventListener("mousemove", function(){}, false);
+                window.addEventListener("mousedown", onMouseDown, false);
+                window.addEventListener("mouseup", onMouseUp, false);
+                window.addEventListener( 'click', function () {
+                    controls.lock();
+                }, false );
+                window.addEventListener('keydown',function(strut){
+                    //Checking if P key is down(for pause) or U key is down (for upgrades)
+                    temp = `${strut.code}`;
+                    switch(temp){
+                        case 'KeyP':
+                            gameOn = !gameOn;
+                            if(gameOn){
+                                setTimeout("Creep.runLevel()", 5000);
+                            }
+                            break;
+                        case 'KeyU':{
+                            Score.upgrade();
+                            bullet = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 4), new THREE.MeshBasicMaterial({color: Score.myColor}));
+                            bullet.name = 'Bullet';
+                            }
+                    }
+                }, false);
+
+            }
+            //All of these functions are commented in the report
+            function checkCollision(){
+                for (let i = bullets.length - 1; i >= 0; i--){
+                    let b = bullets[i];
+                    let p = b.getWorldPosition();
+                    for (let j = Creep.creeps.length - 1; j >= 0; j-- ){
+                        let a = Creep.creeps[j];
+                        let c = a.getWorldPosition();
+                        if(p.x <= c.x + 380 && p.x >= c.x - 380 && p.z <= c.z + 380 && p.z >= c.z -380 && p.y <= c.y + 330 && p.y >= c.y - 330){
+                            if(gameOn === true) {
+                                Creep.isHit(j,Score.damage);
+                                bullets.splice(i,1);
+                                scene.remove(b);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            function onMouseDown(){
+                bullet.quaternion.copy(camera.quaternion);
+                bullet.position.copy(emitter.getWorldPosition());
+                scene.add(bullet);
+                bullets.push(bullet);
+                if(Score.winCondition === true){
+                    if(flag === true){
+                        window.open(winPath);
+                        flag = false;
+                        gameOn = false;
+                    }
+                }
+                if(Score.loseCondition === true){
+                    if(flag === true){
+                        window.open(losePath);
+                        flag = false;
+                        gameOn = false;
+                    }
+                }
+            }
+
+            function onMouseUp(){
+
+            }
+
+            function onWindowResize() {
+
+                SCREEN_HEIGHT = window.innerHeight;
+                SCREEN_WIDTH = window.innerWidth;
+
+                renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+                camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+                camera.updateProjectionMatrix();
+                camera.radius = (SCREEN_WIDTH + SCREEN_HEIGHT) / 4;
+            }
+
+            function drawBox() {
+
+                let cube = new THREE.BoxGeometry(30000, 30000, 30000);
+
+                let cubeMaterials = [
+                    // back side
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('textures/side.jpg'),
+                        side: THREE.DoubleSide
+                    }),
+                    // front side
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('textures/side.jpg'),
+                        side: THREE.DoubleSide
+                    }),
+                    // Top side
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('textures/top.png'),
+                        side: THREE.DoubleSide
+                    }),
+                    // Bottom side
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('textures/grid.png'),
+                        side: THREE.DoubleSide
+                    }),
+                    // right side
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('textures/side.jpg'),
+                        side: THREE.DoubleSide
+                    }),
+                    // left side
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('textures/side.jpg'),
+                        side: THREE.DoubleSide
+                    })
+                ];
+
+                let cubeMaterial = new THREE.MeshFaceMaterial(cubeMaterials);
+                let mesh = new THREE.Mesh(cube, cubeMaterial);
+                scene.add(mesh);
+            }
+
+            function drawElements() {
+
+                let parameters = new THREE.TextureLoader().load('textures/dolphin.jpg');
+                parameters.wrapS = THREE.RepeatWrapping;
+                parameters.wrapT = THREE.RepeatWrapping;
+                parameters.repeat.set(2, 2);
+
+                let parameters1 = new THREE.TextureLoader().load('textures/tower.jpg');
+                parameters1.wrapS = THREE.RepeatWrapping;
+                parameters1.wrapT = THREE.RepeatWrapping;
+                parameters1.repeat.set(2, 2);
+
+                let material = new THREE.MeshLambertMaterial({map: parameters});
+                let material1 = new THREE.MeshLambertMaterial({map: parameters1});
+
+                loaderObj.load('models/tower.obj', function (tower) {
+                    tower.scale.x = 2000;
+                    tower.scale.y = 2000;
+                    tower.scale.z = 2000;
+                    tower.rotation.y = Math.PI;
+                    tower.traverse(function (node) {
+                        if (node.isMesh) node.material = material1;
+                    });
+                    base.add(tower);
+                });
+
+                loaderObj.load('models/cannon.obj', function (cannon) {
+                    cannon.scale.x = 1;
+                    cannon.scale.y = 1;
+                    cannon.scale.z = 1;
+                    cannon.position.set(2, -.5, -1);
+                    cannon.rotation.y = Math.PI * - 0.5;
+                    cannon.rotation.x = Math.PI * -0.06;
+                    cannon.traverse(function (node) {
+                        if (node.isMesh) node.material = material;
+                    });
+                    base2.add(cannon);
+                });
+            }
+
+            function refreshValues(){
+                outScore.innerHTML = Score.getScore();
+                waveNum.innerHTML = Creep.getWave();
+                outCash.innerHTML = Score.getCash();
+                outTowerHealth.innerHTML = Score.getHealth();
+                outCannonDamage.innerHTML = Score.getDamage();
+                outAvailableUpgrades.innerHTML = Score.upgradeCheck();
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                delta = clock.getDelta();
+                checkCollision();
+                refreshValues();
+                stats.update();
+                render();
+            }
+
+            function render() {
+                counter = 0;
+
+                bullets.forEach(b => {
+                    b.translateZ(-speedBullet* delta);
+                    if (b.position.y <= 300){
+                        scene.remove(b);
+                        bullets.splice(counter, 1);
+                    }
+                    counter++;
+                });
+
+                if (gameOn === true) {
+                    let now = new Date().getTime();
+                    dt = (now - lastUpdate) / 1000;
+                    if (dt > speed){
+                        Creep.update();
+                        lastUpdate = now;
+                    }
+                }
+
+                if (gameOn === false) {
+                    if (Score.loseCondition === true) {
+                        endGameScreen.innerHTML = "You&nbsplose.&nbspClick&nbspeverywhere&nbspto&nbspexit&nbspthe&nbspgame.&nbspHere&nbspare&nbspyour&nbspresults: "
+                    }
+                    if (Score.winCondition === true) {
+                        endGameScreen.innerHTML = "You&nbspwin!&nbspClick&nbspeverywhere&nbspto&nbspexit&nbspthe&nbspgame.&nbspHere&nbspare&nbspyour&nbspresults: "
+                    }
+                }
+
+                renderer.clear();
+                renderer.render(scene, camera);
+            }
+        }
+    });
+
+</script>
+</body>
+</html>
