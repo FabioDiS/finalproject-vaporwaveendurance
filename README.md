@@ -6,4 +6,4 @@ Click "Play" Button to start playing.
 
 After this, click everywhere in the Canvas to start playing.
 
-Shoot by left Burton of the mouse, pause by pressing P, upgrade cannon when available pressing U.
+Shoot by clicking left Button of the mouse, pause by pressing P, upgrade cannon when available pressing U.
