@@ -1,6 +1,6 @@
 # Vaporwave Endurance
 ## [@giabb](https://github.com/giabb) - [@FabioDiS](https://github.com/FabioDiS)
-Github Pages link: [GitHub Pages](https://sapienzainteractivegraphicscourse.github.io/finalproject-vaporwaveendurance/).
+[GitHub Pages Link](https://sapienzainteractivegraphicscourse.github.io/finalproject-vaporwaveendurance/).
 
 Click "Play" Button to start playing.
 
