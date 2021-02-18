@@ -1,5 +1,5 @@
 # Vaporwave Endurance
-## Giovanbattista Abbate - Fabio Di Spazio
+## [@giabb](https://github.com/giabb) - [@FabioDiS](https://github.com/FabioDiS)
 The link is [GitHub Pages](https://sapienzainteractivegraphicscourse.github.io/finalproject-vaporwaveendurance/).
 
 Click "Play" Button to start playing.
