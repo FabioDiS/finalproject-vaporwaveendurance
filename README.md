@@ -8,7 +8,7 @@ The game was developed for the course of Interactive Graphics at Sapienza Univer
 
 Just download the project and open `index.html` file, hit the play button and have fun!
 If you want, you can try [the live demo](https://fabiodis.github.io/finalproject-vaporwaveendurance/).
-To learn more about the project, you can read the [documentation](documentation.pdf)
+To learn more about the project, you can read the [documentation](documentation.pdf).
 
 
 ## Built With
